@@ -148,16 +148,17 @@ let rec destroy_nowait ?(preserve_xs_vm=false) ~xc ~xs domid =
 	let all_pci_devices = List.filter (fun device -> device.backend.kind = Pci) all_devices in
 	let all_nonpci_devices = List.filter (fun device -> device.backend.kind <> Pci) all_devices in
 
-	(* Now we should kill the domain itself *)
-	debug "Domain.destroy calling Xc.domain_destroy (domid %d)" domid;
-	log_exn_continue "Xc.domain_destroy" (Xc.domain_destroy xc) domid;
-
 	(* forcibly shutdown every pci backend. doing it before shutting ioemu ensures that device is back in dom0
          * when surfman gets notified about domain death *)
 	List.iter (fun device ->
 		try Device.hard_shutdown ~xs device
 		with exn -> debug "Caught exception %s while destroying device %s" (Printexc.to_string exn) (string_of_device device);
 	) all_pci_devices;
+
+	(* Now we should kill the domain itself *)
+	debug "Domain.destroy calling Xc.domain_destroy (domid %d)" domid;
+	log_exn_continue "Xc.domain_destroy" (Xc.domain_destroy xc) domid;
+
 
 	log_exn_continue "Error signaling dm-agents that domain will be destroyed"
 	                 (fun () -> Dmagent.stop ~xs domid) ();
