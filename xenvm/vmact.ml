@@ -888,11 +888,21 @@ let shutdown_vm xc xs xal state force reason =
 
 		info "vm acknowledged shutdown request. waiting release";
 		(* wait domain release with xal *)
+		let was_sleep = 
+			try
+				xs.Xs.read (xs.Xs.getdomainpath domid ^ "/control/s3-state")
+			with Xb.Noent ->
+				"0"
+		in
 		let xalreason =
 			try
-				 Xal.wait_release xal ~timeout:(60. *. 30.) domid
+				 if was_sleep <> "0" then (
+					Xal.wait_release xal ~timeout:(5.) domid
+				 )else(
+				 	Xal.wait_release xal ~timeout:(60. *. 30.) domid
+				 )
 			with Xal.Timeout ->
-				info "vm didn't shutdown after 30min";
+				info "vm didn't shutdown after timeout";
 				raise Vm_didnt_shutdown;
 		in
 		let matchreason =

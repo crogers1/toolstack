@@ -720,6 +720,40 @@ let wait ctx timeout =
 	with
 	| Timeout -> ()
 
+let wait_release_with_retry ctx ?timeout domid fn =
+	if domain_is_dead ctx domid then
+		domain_get_dead ctx domid
+	else (
+		let finished = ref false in
+		let cb ctx domid2 = (finished := domid = domid2) in
+		let old_callback = ctx.callback_release in
+		ctx.callback_release <- cb;
+
+		let start = Unix.gettimeofday () in
+		let timeout' = ref timeout in
+		try
+			while not (!finished)
+			do
+				fn
+				process ?timeout:(!timeout') ctx;
+				let spent = Unix.gettimeofday () -. start in
+				timeout' := may (fun x -> x -. spent) timeout;
+			done;
+			ctx.callback_release <- old_callback;
+			domain_get_dead ctx domid
+		with Timeout ->
+			(* last resort, ask xen directly just in case we didn't saw the @releaseDomain *)
+			ctx.callback_release <- old_callback;
+			let newdomains, deaddomains = domain_update ctx in
+			List.iter (fun domid -> ctx.callback_introduce ctx domid) newdomains;
+			List.iter (fun domid -> ctx.callback_release ctx domid) deaddomains;
+			if deaddomains <> [] && domain_is_dead ctx domid then (
+				(* we missed the event but it's dead anyway so we recover from timeout *)
+				domain_get_dead ctx domid
+			) else
+				raise Timeout
+	)
+
 let wait_release ctx ?timeout domid =
 	if domain_is_dead ctx domid then
 		domain_get_dead ctx domid
