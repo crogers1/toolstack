@@ -14,13 +14,15 @@
  * GNU Lesser General Public License for more details.
  *)
 
+open Printf
+
 type operation = Debug | Directory | Read | Getperms |
                  Watch | Unwatch | Transaction_start |
                  Transaction_end | Introduce | Release |
                  Getdomainpath | Write | Mkdir | Rm |
                  Setperms | Watchevent | Error | Isintroduced |
                  Resume | Set_target
-               | Restrict 
+               | Restrict | XSReset_watches | XSInvalid 
 
 (* There are two sets of XB operations: the one coming from open-source and *)
 (* the one coming from our private patch queue. These operations            *)
@@ -31,13 +33,13 @@ let operation_c_mapping =
            Transaction_end; Introduce; Release;
            Getdomainpath; Write; Mkdir; Rm;
            Setperms; Watchevent; Error; Isintroduced;
-           Resume; Set_target |]
+           Resume; Set_target; |]
 let size = Array.length operation_c_mapping
 
 (* [offset_pq] has to be the same as in <xen/io/xs_wire.h> *)
 let offset_pq = size
 let operation_c_mapping_pq =
-	[| Restrict |]
+	[| Restrict; XSReset_watches; XSInvalid |]
 let size_pq = Array.length operation_c_mapping_pq
 
 let array_search el a =
@@ -52,7 +54,9 @@ let of_cval i =
 	then operation_c_mapping.(i)
 	else if i >= offset_pq && i < offset_pq + size_pq
 	then operation_c_mapping_pq.(i-offset_pq)
-	else raise Not_found
+	else 
+		let msg = sprintf "argument provided(i): %d" i in
+		raise (Invalid_argument msg)
 
 let to_cval op =
 	try
@@ -82,3 +86,6 @@ let to_string ty =
 	| Resume		-> "RESUME"
 	| Set_target		-> "SET_TARGET"
 	| Restrict		-> "RESTRICT"
+	| XSReset_watches -> "RESET_WATCHES"
+    | XSInvalid       -> "INVALID"
+			

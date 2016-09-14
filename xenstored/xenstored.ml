@@ -49,7 +49,6 @@ let process_connection_fds store cons domains rset wset =
 
 let process_domains store cons domains =
 	let do_io_domain domain =
-		debug "do_io_domain: %s  domain:%s" (do_io_domain) (domain);
 		let con = Connections.find_domain cons (Domain.get_id domain) in
 		Process.do_input store cons domains con;
 		Process.do_output store cons domains con in
@@ -383,12 +382,14 @@ let _ =
 		process_domains store cons domains
 		in
 
+    Printexc.record_backtrace true;
 	while not !quit
 	do
 		try
 			main_loop ()
 		with exc ->
 			error "caught exception %s" (Printexc.to_string exc);
+			error "backtrace: %s" (Printexc.get_backtrace ());
 			if cf.reraise_top_level then
 				raise exc
 	done;
