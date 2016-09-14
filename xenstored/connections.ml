@@ -16,7 +16,6 @@
  *)
 
 let debug fmt = Logs.debug "general" fmt
-let error fmt = Logs.error "general" fmt
 
 type t = {
 	mutable anonymous: Connection.t list;
@@ -44,18 +43,10 @@ let select cons =
 	inset, outset
 
 let find cons fd =
-	try
-		List.find (fun c -> Connection.get_fd c = fd) cons.anonymous
-	with exc ->
-		error "Error in Connections.find";
-		raise exc
+	List.find (fun c -> Connection.get_fd c = fd) cons.anonymous
 
 let find_domain cons id =
-	try
-		Hashtbl.find cons.domains id
-	with exc ->
-		error "domain: %d" (id);
-		raise exc
+	Hashtbl.find cons.domains id
 
 let del_watches_of_con con watches =
 	match List.filter (fun w -> Connection.get_con w != con) watches with

@@ -382,14 +382,12 @@ let _ =
 		process_domains store cons domains
 		in
 
-    Printexc.record_backtrace true;
 	while not !quit
 	do
 		try
 			main_loop ()
 		with exc ->
 			error "caught exception %s" (Printexc.to_string exc);
-			error "backtrace: %s" (Printexc.get_backtrace ());
 			if cf.reraise_top_level then
 				raise exc
 	done;

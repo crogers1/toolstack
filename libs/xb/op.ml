@@ -14,8 +14,6 @@
  * GNU Lesser General Public License for more details.
  *)
 
-open Printf
-
 type operation = Debug | Directory | Read | Getperms |
                  Watch | Unwatch | Transaction_start |
                  Transaction_end | Introduce | Release |
@@ -54,9 +52,7 @@ let of_cval i =
 	then operation_c_mapping.(i)
 	else if i >= offset_pq && i < offset_pq + size_pq
 	then operation_c_mapping_pq.(i-offset_pq)
-	else 
-		let msg = sprintf "argument provided(i): %d" i in
-		raise (Invalid_argument msg)
+	else raise Not_found
 
 let to_cval op =
 	try
